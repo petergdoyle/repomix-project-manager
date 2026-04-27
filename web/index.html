@@ -382,7 +382,7 @@
                         <button class="btn btn-action" onclick="action('${p.name}', 'build')">Build</button>
                         <button class="btn btn-action" onclick="action('${p.name}', 'refresh')">Refresh</button>
                         <button class="btn btn-action" onclick="viewOutput('${p.name}')">View</button>
-                        <a class="btn btn-action" href="/api/projects/${p.name}/output?download=true" download="${p.name}-repomix.md">Download</a>
+                        <a class="btn btn-action" href="/api/projects/${p.name}/download/${p.name}-repomix.md" download>Download</a>
                         <button class="btn btn-action" onclick="action('${p.name}', 'clean')">Clean</button>
                         <button class="btn btn-action" style="color: var(--error);" onclick="confirmArchive('${p.name}')">Archive</button>
                     </div>
