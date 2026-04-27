@@ -61,11 +61,14 @@ async def get_output(name: str, download: bool = False):
     if not output_path.exists():
         raise HTTPException(status_code=404, detail="Output not found. Run build first.")
     
-    headers = {}
     if download:
-        headers["Content-Disposition"] = f"attachment; filename={name}-repomix.md"
+        return FileResponse(
+            output_path, 
+            filename=f"{name}-repomix.md",
+            media_type="application/octet-stream"
+        )
         
-    return FileResponse(output_path, headers=headers)
+    return FileResponse(output_path)
 
 # Serve static files and index
 @app.get("/", response_class=HTMLResponse)

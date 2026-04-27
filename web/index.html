@@ -444,7 +444,12 @@
         }
 
         function downloadOutput(name) {
-            window.location.href = `/api/projects/${name}/output?download=true`;
+            const link = document.createElement('a');
+            link.href = `/api/projects/${name}/output?download=true`;
+            link.download = `${name}-repomix.md`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function confirmArchive(name) {
