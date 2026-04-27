@@ -89,6 +89,11 @@ def create():
         yaml.dump(config, f, default_flow_style=False)
     
     click.echo(f"Project '{name}' created at {project_path}")
+    
+    if click.confirm("Would you like to run the initial build now?", default=True):
+        # We need to invoke build with the context to ensure it runs correctly
+        ctx = click.get_current_context()
+        ctx.invoke(build, name=name)
 
 @cli.command()
 @click.argument("name")
@@ -136,11 +141,18 @@ def build(name):
 
     click.echo(f"Running repomix on {run_path}...")
     try:
-        subprocess.run([
-            "repomix", 
-            str(run_path), 
-            "--config", str(repomix_config_tmp)
-        ], check=True)
+        cmd = ["repomix"]
+        
+        # If it's a remote project and not yet cloned, we can use --remote for the initial pack
+        # However, our architecture prefers local clones for 'refresh' capability.
+        # We will use the local path (run_path) which is either the local source or the cloned repo.
+        
+        cmd.extend([str(run_path), "--config", str(repomix_config_tmp)])
+        
+        # Note: We don't use --remote here because we already handled the cloning/pulling
+        # to ensure the repo is persistent in repos/ for the 'refresh' command.
+        
+        subprocess.run(cmd, check=True)
         click.echo(f"Build complete. Output in {project_path}/outputs/")
     except subprocess.CalledProcessError as e:
         click.echo(f"Error running repomix: {e}")
