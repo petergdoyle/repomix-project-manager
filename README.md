@@ -60,3 +60,22 @@ This will start a FastAPI server at `http://localhost:8000`. The interface allow
 - **Action**: Build, Refresh, and Clean projects with a single click.
 - **Preview**: Open and view the generated repomix outputs directly in your browser.
 - **Create**: Add new projects via a guided modal.
+
+## Docker Usage
+You can run the web interface in a Docker container to ensure a consistent environment:
+
+1. **Build the image**:
+   ```bash
+   make docker-build
+   ```
+
+2. **Run the container**:
+   ```bash
+   make docker-run
+   ```
+   This will start the server on `http://localhost:8000`. It automatically mounts your local `projects/`, `repos/`, and `archive/` folders, so changes made in the web UI are reflected on your host machine (and vice-versa). It also mounts your `~/.ssh` directory (read-only) to allow Git SSH operations.
+
+3. **Stop the container**:
+   ```bash
+   make docker-stop
+   ```

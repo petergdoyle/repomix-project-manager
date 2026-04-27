@@ -1,4 +1,4 @@
-.PHONY: env project build clean archive refresh list web help
+.PHONY: env project build clean archive refresh list web docker-build docker-run docker-stop help
 
 # Project variables
 VENV := .venv
@@ -14,7 +14,10 @@ help:
 	@echo "  make refresh NAME=<name> - Pull latest changes from remote (git projects only)"
 	@echo "  make clean NAME=<name>  - Clean outputs for a specific project"
 	@echo "  make archive NAME=<name> - Archive a project and remove it from projects/"
-	@echo "  make web                - Start the web interface"
+	@echo "  make web                - Start the web interface locally"
+	@echo "  make docker-build       - Build the Docker image"
+	@echo "  make docker-run         - Run the web interface in a Docker container"
+	@echo "  make docker-stop        - Stop the Docker container"
 
 env:
 	@echo "Setting up environment..."
@@ -57,3 +60,27 @@ archive:
 web:
 	@echo "Starting web server on http://localhost:8000..."
 	@$(PYTHON) server.py
+
+DOCKER_IMAGE := repomix-manager
+DOCKER_CONTAINER := repomix-manager-instance
+
+docker-build:
+	@echo "Building Docker image $(DOCKER_IMAGE)..."
+	@docker build -t $(DOCKER_IMAGE) .
+
+docker-run:
+	@echo "Running $(DOCKER_IMAGE) in container..."
+	@docker run -d \
+		--name $(DOCKER_CONTAINER) \
+		-p 8000:8000 \
+		-v $$(pwd)/projects:/app/projects \
+		-v $$(pwd)/repos:/app/repos \
+		-v $$(pwd)/archive:/app/archive \
+		-v $$HOME/.ssh:/root/.ssh:ro \
+		$(DOCKER_IMAGE)
+	@echo "Web interface is now running at http://localhost:8000"
+
+docker-stop:
+	@echo "Stopping and removing container $(DOCKER_CONTAINER)..."
+	@docker stop $(DOCKER_CONTAINER) || true
+	@docker rm $(DOCKER_CONTAINER) || true
