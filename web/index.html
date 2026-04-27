@@ -178,6 +178,7 @@
             background: rgba(255,255,255,0.05);
             color: #fff;
             border: 1px solid var(--glass-border);
+            text-decoration: none;
         }
 
         .btn-action:hover {
@@ -381,7 +382,7 @@
                         <button class="btn btn-action" onclick="action('${p.name}', 'build')">Build</button>
                         <button class="btn btn-action" onclick="action('${p.name}', 'refresh')">Refresh</button>
                         <button class="btn btn-action" onclick="viewOutput('${p.name}')">View</button>
-                        <button class="btn btn-action" onclick="downloadOutput('${p.name}')">Download</button>
+                        <a class="btn btn-action" href="/api/projects/${p.name}/output?download=true" download="${p.name}-repomix.md">Download</a>
                         <button class="btn btn-action" onclick="action('${p.name}', 'clean')">Clean</button>
                         <button class="btn btn-action" style="color: var(--error);" onclick="confirmArchive('${p.name}')">Archive</button>
                     </div>
@@ -441,15 +442,6 @@
 
         function viewOutput(name) {
             window.open(`/api/projects/${name}/output`, '_blank');
-        }
-
-        function downloadOutput(name) {
-            const link = document.createElement('a');
-            link.href = `/api/projects/${name}/output?download=true`;
-            link.download = `${name}-repomix.md`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
         }
 
         function confirmArchive(name) {
