@@ -63,6 +63,8 @@ This will start a FastAPI server at `http://localhost:8000`. The interface allow
 - **Preview**: Open and view the generated repomix outputs directly in your browser.
 - **Create**: Add new projects via a guided modal.
 
+![Web Interface](docs/screenshots/web.png)
+
 ## Docker Usage
 You can run the web interface in a Docker container to ensure a consistent environment:
 
