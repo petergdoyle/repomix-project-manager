@@ -167,8 +167,8 @@
 
         .actions {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 0.75rem;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
         }
 
         .btn-action {
@@ -356,8 +356,10 @@
             try {
                 const response = await fetch('/api/projects');
                 const projects = await response.json();
+                console.log("Fetched projects:", projects);
                 renderProjects(projects);
             } catch (err) {
+                console.error("Fetch error:", err);
                 showToast("Failed to fetch projects", true);
             }
         }
@@ -379,7 +381,9 @@
                         <button class="btn btn-action" onclick="action('${p.name}', 'build')">Build</button>
                         <button class="btn btn-action" onclick="action('${p.name}', 'refresh')">Refresh</button>
                         <button class="btn btn-action" onclick="viewOutput('${p.name}')">View</button>
+                        <button class="btn btn-action" onclick="downloadOutput('${p.name}')">Download</button>
                         <button class="btn btn-action" onclick="action('${p.name}', 'clean')">Clean</button>
+                        <button class="btn btn-action" style="color: var(--error);" onclick="confirmArchive('${p.name}')">Archive</button>
                     </div>
                 </div>
             `).join('');
@@ -388,7 +392,7 @@
         async function action(name, type) {
             setLoading(true, `${type.charAt(0).toUpperCase() + type.slice(1)}ing ${name}...`);
             try {
-                const res = await fetch(\`/api/projects/\${name}/\${type}\`, { method: 'POST' });
+                const res = await fetch(`/api/projects/${name}/${type}`, { method: 'POST' });
                 const data = await res.json();
                 if (res.ok) {
                     showToast(data.message || "Success");
@@ -436,7 +440,17 @@
         }
 
         function viewOutput(name) {
-            window.open(\`/api/projects/\${name}/output\`, '_blank');
+            window.open(`/api/projects/${name}/output`, '_blank');
+        }
+
+        function downloadOutput(name) {
+            window.location.href = `/api/projects/${name}/output?download=true`;
+        }
+
+        function confirmArchive(name) {
+            if (confirm(`Are you sure you want to archive and remove project '${name}'?`)) {
+                action(name, 'archive');
+            }
         }
 
         function showModal() {

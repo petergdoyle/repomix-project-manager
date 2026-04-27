@@ -56,11 +56,16 @@ async def archive_project(name: str):
     return res
 
 @app.get("/api/projects/{name}/output")
-async def get_output(name: str):
+async def get_output(name: str, download: bool = False):
     output_path = mp.PROJECTS_DIR / name / "outputs" / "repomix-output.md"
     if not output_path.exists():
         raise HTTPException(status_code=404, detail="Output not found. Run build first.")
-    return FileResponse(output_path)
+    
+    headers = {}
+    if download:
+        headers["Content-Disposition"] = f"attachment; filename={name}-repomix.md"
+        
+    return FileResponse(output_path, headers=headers)
 
 # Serve static files and index
 @app.get("/", response_class=HTMLResponse)
