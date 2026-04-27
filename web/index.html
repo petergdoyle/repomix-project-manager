@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repomix Project Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-dark: #0f172a;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.5;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(79, 70, 229, 0.1) 0%, transparent 40%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, #6366f1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .card {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-git { background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); }
+        .badge-local { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-fresh .dot { background: var(--success); box-shadow: 0 0 10px var(--success); }
+        .status-need-refresh .dot { background: var(--warning); box-shadow: 0 0 10px var(--warning); }
+        .status-not-cloned .dot { background: var(--text-muted); }
+        .status-error .dot { background: var(--error); box-shadow: 0 0 10px var(--error); }
+
+        .source-url {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background: rgba(0,0,0,0.2);
+            padding: 0.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .btn-action {
+            padding: 0.5rem;
+            font-size: 0.85rem;
+            justify-content: center;
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn-action:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: var(--primary);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal {
+            background: var(--bg-dark);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal.active { transform: scale(1); }
+        .modal-overlay.active { display: flex; opacity: 1; }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        input {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--glass-border);
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            color: #fff;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(99, 102, 241, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: none;
+            animation: slideIn 0.3s ease-out;
+            z-index: 3000;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+        <p id="loading-text">Processing...</p>
+    </div>
+
+    <div class="container">
+        <header>
+            <div>
+                <h1>Repomix Manager</h1>
+                <p style="color: var(--text-muted); margin-top: 0.5rem;">Orchestrate your code packing workflow</p>
+            </div>
+            <button class="btn btn-primary" onclick="showModal()">
+                <span>+</span> New Project
+            </button>
+        </header>
+
+        <div class="grid" id="project-grid">
+            <!-- Projects will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Create Project Modal -->
+    <div class="modal-overlay" id="modal-overlay" onclick="hideModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2 style="margin-bottom: 1.5rem; font-family: 'Outfit';">Create Project</h2>
+            <div class="form-group">
+                <label>Project Name</label>
+                <input type="text" id="p-name" placeholder="my-awesome-repo">
+            </div>
+            <div class="form-group">
+                <label>Source URL or Path</label>
+                <input type="text" id="p-source" placeholder="git@github.com:user/repo.git">
+            </div>
+            <div class="form-group">
+                <label>SSH Key Path (Optional)</label>
+                <input type="text" id="p-ssh" placeholder="~/.ssh/id_rsa">
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button class="btn btn-primary" style="flex: 1; justify-content: center;" onclick="createProject()">Create</button>
+                <button class="btn" style="flex: 1; justify-content: center; background: rgba(255,255,255,0.05);" onclick="hideModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        async function fetchProjects() {
+            try {
+                const response = await fetch('/api/projects');
+                const projects = await response.json();
+                renderProjects(projects);
+            } catch (err) {
+                showToast("Failed to fetch projects", true);
+            }
+        }
+
+        function renderProjects(projects) {
+            const grid = document.getElementById('project-grid');
+            grid.innerHTML = projects.map(p => `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">${p.name}</div>
+                        <span class="badge ${p.type === 'Git' ? 'badge-git' : 'badge-local'}">${p.type}</span>
+                    </div>
+                    <div class="status status-${p.status.toLowerCase().replace(' ', '-')}">
+                        <div class="dot"></div>
+                        <span>${p.status}</span>
+                    </div>
+                    <div class="source-url" title="${p.source}">${p.source}</div>
+                    <div class="actions">
+                        <button class="btn btn-action" onclick="action('${p.name}', 'build')">Build</button>
+                        <button class="btn btn-action" onclick="action('${p.name}', 'refresh')">Refresh</button>
+                        <button class="btn btn-action" onclick="viewOutput('${p.name}')">View</button>
+                        <button class="btn btn-action" onclick="action('${p.name}', 'clean')">Clean</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function action(name, type) {
+            setLoading(true, `${type.charAt(0).toUpperCase() + type.slice(1)}ing ${name}...`);
+            try {
+                const res = await fetch(\`/api/projects/\${name}/\${type}\`, { method: 'POST' });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message || "Success");
+                } else {
+                    showToast(data.detail || "Error occurred", true);
+                }
+                fetchProjects();
+            } catch (err) {
+                showToast("Request failed", true);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function createProject() {
+            const name = document.getElementById('p-name').value;
+            const source = document.getElementById('p-source').value;
+            const ssh = document.getElementById('p-ssh').value;
+
+            if (!name || !source) {
+                showToast("Name and Source are required", true);
+                return;
+            }
+
+            hideModal();
+            setLoading(true, "Creating project...");
+            try {
+                const res = await fetch('/api/projects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, source, ssh_key_path: ssh })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message);
+                    fetchProjects();
+                } else {
+                    showToast(data.detail, true);
+                }
+            } catch (err) {
+                showToast("Failed to create project", true);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function viewOutput(name) {
+            window.open(\`/api/projects/\${name}/output\`, '_blank');
+        }
+
+        function showModal() {
+            document.getElementById('modal-overlay').classList.add('active');
+            document.querySelector('.modal').classList.add('active');
+        }
+
+        function hideModal(e) {
+            document.getElementById('modal-overlay').classList.remove('active');
+            document.querySelector('.modal').classList.remove('active');
+        }
+
+        function setLoading(active, text = "") {
+            const el = document.getElementById('loading');
+            document.getElementById('loading-text').innerText = text;
+            el.style.display = active ? 'flex' : 'none';
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.borderColor = isError ? 'var(--error)' : 'var(--primary)';
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+
+        // Initial load
+        fetchProjects();
+    </script>
+</body>
+</html>

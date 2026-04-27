@@ -48,23 +48,8 @@ def handle_git_error(e, operation="git operation"):
 def cli():
     pass
 
-@cli.command()
-def create():
-    """Interactively create a new project."""
-    name = click.prompt("Enter project name")
-    source = click.prompt("Enter source (local path or git URL)")
-    
-    ssh_key_path = None
-    if source.startswith("git@") or "ssh://" in source:
-        recent_key = get_most_recent_ssh_key()
-        if recent_key:
-            if click.confirm(f"Found recent SSH key: {recent_key}. Use this?", default=True):
-                ssh_key_path = str(recent_key)
-        
-        if not ssh_key_path:
-            ssh_key_path = click.prompt("Please provide the path to the SSH key to use")
-            ssh_key_path = os.path.expanduser(ssh_key_path)
-
+def create_project(name, source, ssh_key_path=None):
+    """Programmatic version of create."""
     project_path = PROJECTS_DIR / name
     project_path.mkdir(parents=True, exist_ok=True)
     (project_path / "outputs").mkdir(exist_ok=True)
@@ -88,50 +73,44 @@ def create():
     with open(config_file, "w") as f:
         yaml.dump(config, f, default_flow_style=False)
     
-    click.echo(f"Project '{name}' created at {project_path}")
-    
-    if click.confirm("Would you like to run the initial build now?", default=True):
-        # We need to invoke build with the context to ensure it runs correctly
-        ctx = click.get_current_context()
-        ctx.invoke(build, name=name)
+    return {"message": f"Project '{name}' created", "path": str(project_path)}
 
-@cli.command()
-@click.argument("name")
-def build(name):
-    """Run repomix for a specific project."""
+def build_project(name):
+    """Programmatic version of build."""
     project_path = PROJECTS_DIR / name
     config_file = project_path / "repomix-config.yaml"
     
     if not config_file.exists():
-        click.echo(f"Error: Project '{name}' not found or missing config.")
-        return
+        return {"error": f"Project '{name}' not found or missing config."}
 
     with open(config_file, "r") as f:
         config = yaml.safe_load(f)
     
     source = config["source"]
-    
+    logs = []
+
     # Handle git repositories
     if is_git_repo(source):
         repo_path = REPOS_DIR / name
         env = get_git_env(config)
         try:
             if repo_path.exists():
-                click.echo(f"Updating existing repo in {repo_path}...")
+                logs.append(f"Updating existing repo in {repo_path}...")
                 subprocess.run(["git", "-C", str(repo_path), "pull"], check=True, env=env, capture_output=True, text=True)
             else:
-                click.echo(f"Cloning repo to {repo_path}...")
+                logs.append(f"Cloning repo to {repo_path}...")
                 REPOS_DIR.mkdir(exist_ok=True)
                 subprocess.run(["git", "clone", source, str(repo_path)], check=True, env=env, capture_output=True, text=True)
         except subprocess.CalledProcessError as e:
-            handle_git_error(e, "cloning/pulling repository")
-            return
+            error_msg = str(e.stderr if hasattr(e, 'stderr') else e)
+            if "Could not resolve host" in error_msg or "Connection timed out" in error_msg:
+                return {"error": f"Network connection to host is not available for cloning/pulling repository.", "logs": logs}
+            return {"error": f"Error during cloning/pulling: {error_msg}", "logs": logs}
         run_path = repo_path
     else:
         run_path = Path(source)
         if not run_path.exists():
-            click.echo(f"Error: Local path {run_path} does not exist.")
-            return
+            return {"error": f"Local path {run_path} does not exist."}
 
     # Prepare repomix command
     repomix_config_tmp = project_path / "repomix.config.json"
@@ -139,37 +118,24 @@ def build(name):
     with open(repomix_config_tmp, "w") as f:
         json.dump(config.get("repomix_options", {}), f)
 
-    click.echo(f"Running repomix on {run_path}...")
+    logs.append(f"Running repomix on {run_path}...")
     try:
-        cmd = ["repomix"]
-        
-        # If it's a remote project and not yet cloned, we can use --remote for the initial pack
-        # However, our architecture prefers local clones for 'refresh' capability.
-        # We will use the local path (run_path) which is either the local source or the cloned repo.
-        
-        cmd.extend([str(run_path), "--config", str(repomix_config_tmp)])
-        
-        # Note: We don't use --remote here because we already handled the cloning/pulling
-        # to ensure the repo is persistent in repos/ for the 'refresh' command.
-        
-        subprocess.run(cmd, check=True)
-        click.echo(f"Build complete. Output in {project_path}/outputs/")
+        cmd = ["repomix", str(run_path), "--config", str(repomix_config_tmp)]
+        subprocess.run(cmd, check=True, capture_output=True, text=True)
+        return {"success": True, "message": f"Build complete. Output in {project_path}/outputs/", "logs": logs}
     except subprocess.CalledProcessError as e:
-        click.echo(f"Error running repomix: {e}")
+        return {"error": f"Error running repomix: {e.stderr}", "logs": logs}
     finally:
         if repomix_config_tmp.exists():
             repomix_config_tmp.unlink()
 
-@cli.command()
-@click.argument("name")
-def refresh(name):
-    """Pull from remote git repository if applicable."""
+def refresh_project(name):
+    """Programmatic version of refresh."""
     project_path = PROJECTS_DIR / name
     config_file = project_path / "repomix-config.yaml"
     
     if not config_file.exists():
-        click.echo(f"Error: Project '{name}' not found.")
-        return
+        return {"error": f"Project '{name}' not found."}
 
     with open(config_file, "r") as f:
         config = yaml.safe_load(f)
@@ -178,36 +144,29 @@ def refresh(name):
     if is_git_repo(source):
         repo_path = REPOS_DIR / name
         if not repo_path.exists():
-            click.echo(f"Project '{name}' repo not found. Running build to clone...")
-            build.callback(name)
-            return
+            return {"status": "cloning", "message": "Repo not found, triggering build..."}
 
         env = get_git_env(config)
         try:
-            click.echo(f"Refreshing {name} from {source}...")
             subprocess.run(["git", "-C", str(repo_path), "pull"], check=True, env=env, capture_output=True, text=True)
-            click.echo(f"Project '{name}' refreshed successfully.")
+            return {"success": True, "message": f"Project '{name}' refreshed successfully."}
         except subprocess.CalledProcessError as e:
-            handle_git_error(e, f"refreshing {name}")
+            error_msg = str(e.stderr if hasattr(e, 'stderr') else e)
+            if "Could not resolve host" in error_msg or "Connection timed out" in error_msg:
+                return {"error": f"Network connection to host is not available for refreshing."}
+            return {"error": f"Error during refresh: {error_msg}"}
     else:
-        click.echo(f"Warning: Project '{name}' is a local project (path: {source}). Nothing to refresh.")
+        return {"warning": f"Project '{name}' is a local project. Nothing to refresh."}
 
-@cli.command(name="list")
-def list_projects():
-    """List all projects and their status."""
+def get_project_list():
+    """Programmatic version of list."""
     if not PROJECTS_DIR.exists():
-        click.echo("No projects found.")
-        return
+        return []
 
-    projects = [d.name for d in PROJECTS_DIR.iterdir() if d.is_dir()]
-    if not projects:
-        click.echo("No projects found.")
-        return
+    project_names = [d.name for d in PROJECTS_DIR.iterdir() if d.is_dir()]
+    results = []
 
-    click.echo(f"{'PROJECT':<25} {'TYPE':<10} {'STATUS':<15} {'SOURCE'}")
-    click.echo("-" * 80)
-
-    for name in sorted(projects):
+    for name in sorted(project_names):
         config_file = PROJECTS_DIR / name / "repomix-config.yaml"
         if not config_file.exists():
             continue
@@ -226,53 +185,129 @@ def list_projects():
             else:
                 env = get_git_env(config)
                 try:
-                    # Fetch in background to check for updates
-                    subprocess.run(["git", "-C", str(repo_path), "fetch"], check=True, env=env, capture_output=True, text=True, timeout=10)
-                    
-                    # Compare local HEAD with upstream
+                    subprocess.run(["git", "-C", str(repo_path), "fetch"], check=True, env=env, capture_output=True, text=True, timeout=5)
                     local = subprocess.check_output(["git", "-C", str(repo_path), "rev-parse", "HEAD"], text=True).strip()
                     try:
                         remote = subprocess.check_output(["git", "-C", str(repo_path), "rev-parse", "@{u}"], text=True, stderr=subprocess.DEVNULL).strip()
-                        if local == remote:
-                            status = "Fresh"
-                        else:
-                            status = "Need Refresh"
+                        status = "Fresh" if local == remote else "Need Refresh"
                     except subprocess.CalledProcessError:
                         status = "No Upstream"
-                except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+                except:
                     status = "Network Error"
         else:
             status = "Local" if Path(source).exists() else "Missing"
 
-        click.echo(f"{name:<25} {source_type:<10} {status:<15} {source}")
+        results.append({
+            "name": name,
+            "type": source_type,
+            "status": status,
+            "source": source
+        })
+    return results
+
+def clean_project(name):
+    """Programmatic version of clean."""
+    outputs_dir = PROJECTS_DIR / name / "outputs"
+    if outputs_dir.exists():
+        shutil.rmtree(outputs_dir)
+        outputs_dir.mkdir()
+        return {"success": True, "message": f"Cleaned outputs for {name}"}
+    return {"error": f"No outputs found for {name}"}
+
+def archive_project(name):
+    """Programmatic version of archive."""
+    project_path = PROJECTS_DIR / name
+    if not project_path.exists():
+        return {"error": f"Project '{name}' not found."}
+    
+    ARCHIVE_DIR.mkdir(exist_ok=True)
+    archive_name = ARCHIVE_DIR / f"{name}_archive"
+    shutil.make_archive(str(archive_name), 'zip', str(project_path))
+    shutil.rmtree(project_path)
+    return {"success": True, "message": f"Project '{name}' archived to {archive_name}.zip"}
+
+@cli.command()
+def create():
+    """Interactively create a new project."""
+    name = click.prompt("Enter project name")
+    source = click.prompt("Enter source (local path or git URL)")
+    
+    ssh_key_path = None
+    if source.startswith("git@") or "ssh://" in source:
+        recent_key = get_most_recent_ssh_key()
+        if recent_key:
+            if click.confirm(f"Found recent SSH key: {recent_key}. Use this?", default=True):
+                ssh_key_path = str(recent_key)
+        
+        if not ssh_key_path:
+            ssh_key_path = click.prompt("Please provide the path to the SSH key to use")
+            ssh_key_path = os.path.expanduser(ssh_key_path)
+
+    res = create_project(name, source, ssh_key_path)
+    click.echo(res["message"])
+    
+    if click.confirm("Would you like to run the initial build now?", default=True):
+        build.callback(name)
+
+@cli.command()
+@click.argument("name")
+def build(name):
+    """Run repomix for a specific project."""
+    res = build_project(name)
+    if "error" in res:
+        click.echo(f"Error: {res['error']}")
+    else:
+        for log in res.get("logs", []):
+            click.echo(log)
+        click.echo(res["message"])
+
+@cli.command()
+@click.argument("name")
+def refresh(name):
+    """Pull from remote git repository if applicable."""
+    res = refresh_project(name)
+    if "error" in res:
+        click.echo(f"Error: {res['error']}")
+    elif "warning" in res:
+        click.echo(f"Warning: {res['warning']}")
+    elif res.get("status") == "cloning":
+        click.echo(res["message"])
+        build.callback(name)
+    else:
+        click.echo(res["message"])
+
+@cli.command(name="list")
+def list_projects_cli():
+    """List all projects and their status."""
+    results = get_project_list()
+    if not results:
+        click.echo("No projects found.")
+        return
+
+    click.echo(f"{'PROJECT':<25} {'TYPE':<10} {'STATUS':<15} {'SOURCE'}")
+    click.echo("-" * 80)
+    for p in results:
+        click.echo(f"{p['name']:<25} {p['type']:<10} {p['status']:<15} {p['source']}")
 
 @cli.command()
 @click.argument("name")
 def clean(name):
     """Clean outputs for a specific project."""
-    outputs_dir = PROJECTS_DIR / name / "outputs"
-    if outputs_dir.exists():
-        shutil.rmtree(outputs_dir)
-        outputs_dir.mkdir()
-        click.echo(f"Cleaned outputs for {name}")
+    res = clean_project(name)
+    if "error" in res:
+        click.echo(res["error"])
     else:
-        click.echo(f"No outputs found for {name}")
+        click.echo(res["message"])
 
 @cli.command()
 @click.argument("name")
 def archive(name):
     """Archive a project and remove it."""
-    project_path = PROJECTS_DIR / name
-    if not project_path.exists():
-        click.echo(f"Error: Project '{name}' not found.")
-        return
-    
-    ARCHIVE_DIR.mkdir(exist_ok=True)
-    archive_name = ARCHIVE_DIR / f"{name}_archive"
-    shutil.make_archive(str(archive_name), 'zip', str(project_path))
-    
-    shutil.rmtree(project_path)
-    click.echo(f"Project '{name}' archived to {archive_name}.zip and removed from projects/")
+    res = archive_project(name)
+    if "error" in res:
+        click.echo(res["error"])
+    else:
+        click.echo(res["message"])
 
 if __name__ == "__main__":
     cli()

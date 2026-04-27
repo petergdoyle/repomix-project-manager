@@ -47,3 +47,16 @@ make build NAME=repomix-project-manager
 ```
 
 This will clone this repository into `repos/repomix-project-manager` and generate a packed markdown file in `projects/repomix-project-manager/outputs/repomix-output.md`. This is a great way to test new features or verify your setup.
+
+## Web Interface
+You can also manage your projects through a modern web dashboard:
+
+```bash
+make web
+```
+
+This will start a FastAPI server at `http://localhost:8000`. The interface allows you to:
+- **Monitor**: See the status of all your projects (Fresh, Need Refresh, etc.)
+- **Action**: Build, Refresh, and Clean projects with a single click.
+- **Preview**: Open and view the generated repomix outputs directly in your browser.
+- **Create**: Add new projects via a guided modal.

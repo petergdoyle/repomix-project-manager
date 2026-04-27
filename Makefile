@@ -1,4 +1,4 @@
-.PHONY: env project build clean archive refresh list help
+.PHONY: env project build clean archive refresh list web help
 
 # Project variables
 VENV := .venv
@@ -14,12 +14,13 @@ help:
 	@echo "  make refresh NAME=<name> - Pull latest changes from remote (git projects only)"
 	@echo "  make clean NAME=<name>  - Clean outputs for a specific project"
 	@echo "  make archive NAME=<name> - Archive a project and remove it from projects/"
+	@echo "  make web                - Start the web interface"
 
 env:
 	@echo "Setting up environment..."
 	@if [ ! -d "$(VENV)" ]; then python3 -m venv $(VENV); fi
 	@$(PIP) install --upgrade pip
-	@$(PIP) install pyyaml click
+	@$(PIP) install pyyaml click fastapi uvicorn pydantic
 	@if [ "$$(uname)" = "Darwin" ]; then \
 		if ! command -v repomix >/dev/null 2>&1; then \
 			echo "Installing repomix via brew..."; \
@@ -52,3 +53,7 @@ clean:
 archive:
 	@if [ -z "$(NAME)" ]; then echo "Error: NAME is required. Example: make archive NAME=my-project"; exit 1; fi
 	@$(PYTHON) manage_projects.py archive $(NAME)
+
+web:
+	@echo "Starting web server on http://localhost:8000..."
+	@$(PYTHON) server.py
