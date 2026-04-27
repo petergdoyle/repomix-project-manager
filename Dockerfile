@@ -23,7 +23,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY manage_projects.py Makefile server.py ./
 COPY web/ ./web/
 
-RUN pip install --no-cache-dir pyyaml click fastapi uvicorn pydantic
+RUN pip install --no-cache-dir pyyaml click fastapi uvicorn pydantic python-multipart
 
 # Create necessary directories
 RUN mkdir -p projects archive repos

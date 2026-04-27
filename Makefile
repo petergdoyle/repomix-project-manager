@@ -25,7 +25,7 @@ env:
 	@echo "Setting up environment..."
 	@if [ ! -d "$(VENV)" ]; then python3 -m venv $(VENV); fi
 	@$(PIP) install --upgrade pip
-	@$(PIP) install pyyaml click fastapi uvicorn pydantic
+	@$(PIP) install pyyaml click fastapi uvicorn pydantic python-multipart
 	@if [ "$$(uname)" = "Darwin" ]; then \
 		if ! command -v repomix >/dev/null 2>&1; then \
 			echo "Installing repomix via brew..."; \
