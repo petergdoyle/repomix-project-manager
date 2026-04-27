@@ -15,8 +15,11 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
+# Create a virtual environment and update PATH
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 # Copy requirements and install
-# We don't have a requirements.txt yet, so we'll install directly or create one
 COPY manage_projects.py Makefile server.py ./
 COPY web/ ./web/
 
