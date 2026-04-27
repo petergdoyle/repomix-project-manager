@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+projects/*/outputs/
+projects/*/repomix.config.json
+repos/
+archive/*.zip
+.DS_Store
