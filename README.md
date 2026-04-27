@@ -1,6 +1,8 @@
 # Repomix Code Inspector
 
-A wrapper around [repomix](https://github.com/yamadashy/repomix) to manage multiple projects easily.
+A tool to manage multiple `repomix` configurations, pack them on demand, and easily share context with LLMs.
+
+> **🎉 What's New?** Check out the [RELEASE_SUMMARY.md](RELEASE_SUMMARY.md) for details on the new Premium Web UI, Docker containerization, and cross-browser download support!
 
 ## Features
 - **Project Management**: Create and store configurations for different repositories.
