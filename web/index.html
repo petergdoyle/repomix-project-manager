@@ -167,7 +167,7 @@
 
         .actions {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 0.5rem;
         }
 
@@ -340,8 +340,8 @@
                 <input type="text" id="p-source" placeholder="git@github.com:user/repo.git">
             </div>
             <div class="form-group">
-                <label>SSH Key Path (Optional)</label>
-                <input type="text" id="p-ssh" placeholder="~/.ssh/id_rsa">
+                <label>SSH Private Key File (Optional)</label>
+                <input type="file" id="p-ssh-file" style="padding: 0.5rem; background: transparent; border: 1px dashed var(--glass-border);">
             </div>
             <div style="display: flex; gap: 1rem; margin-top: 2rem;">
                 <button class="btn btn-primary" style="flex: 1; justify-content: center;" onclick="createProject()">Create</button>
@@ -383,6 +383,8 @@
                         <button class="btn btn-action" onclick="action('${p.name}', 'refresh')">Refresh</button>
                         <button class="btn btn-action" onclick="viewOutput('${p.name}')">View</button>
                         <a class="btn btn-action" href="/api/projects/${p.name}/download/${p.name}-repomix.md" download>Download</a>
+                        <button class="btn btn-action" onclick="document.getElementById('ssh-upload-${p.name}').click()">Key</button>
+                        <input type="file" id="ssh-upload-${p.name}" style="display: none;" onchange="uploadSSHKey('${p.name}', this)">
                         <button class="btn btn-action" onclick="action('${p.name}', 'clean')">Clean</button>
                         <button class="btn btn-action" style="color: var(--error);" onclick="confirmArchive('${p.name}')">Archive</button>
                     </div>
@@ -411,7 +413,7 @@
         async function createProject() {
             const name = document.getElementById('p-name').value;
             const source = document.getElementById('p-source').value;
-            const ssh = document.getElementById('p-ssh').value;
+            const sshFile = document.getElementById('p-ssh-file').files[0];
 
             if (!name || !source) {
                 showToast("Name and Source are required", true);
@@ -424,10 +426,18 @@
                 const res = await fetch('/api/projects', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, source, ssh_key_path: ssh })
+                    body: JSON.stringify({ name, source })
                 });
                 const data = await res.json();
                 if (res.ok) {
+                    if (sshFile) {
+                        const formData = new FormData();
+                        formData.append('file', sshFile);
+                        await fetch(`/api/projects/${name}/ssh-key`, {
+                            method: 'POST',
+                            body: formData
+                        });
+                    }
                     showToast(data.message);
                     fetchProjects();
                 } else {
@@ -437,6 +447,32 @@
                 showToast("Failed to create project", true);
             } finally {
                 setLoading(false);
+            }
+        }
+
+        async function uploadSSHKey(name, input) {
+            if (!input.files || input.files.length === 0) return;
+            const file = input.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            setLoading(true, "Uploading SSH key...");
+            try {
+                const res = await fetch(`/api/projects/${name}/ssh-key`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast(data.message || "Key updated");
+                } else {
+                    showToast(data.detail || "Failed to upload key", true);
+                }
+            } catch (err) {
+                showToast("Request failed", true);
+            } finally {
+                setLoading(false);
+                input.value = '';
             }
         }
 

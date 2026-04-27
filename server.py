@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
@@ -53,6 +53,14 @@ async def archive_project(name: str):
     res = mp.archive_project(name)
     if "error" in res:
         raise HTTPException(status_code=500, detail=res["error"])
+    return res
+
+@app.post("/api/projects/{name}/ssh-key")
+async def upload_ssh_key(name: str, file: UploadFile = File(...)):
+    content = await file.read()
+    res = mp.set_project_ssh_key(name, key_content=content.decode('utf-8'))
+    if "error" in res:
+        raise HTTPException(status_code=400, detail=res["error"])
     return res
 
 @app.get("/api/projects/{name}/output")

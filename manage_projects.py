@@ -28,12 +28,18 @@ def is_git_repo(source):
     """Check if the source is a git repository URL."""
     return source.startswith("http") or source.startswith("git@") or "ssh://" in source
 
-def get_git_env(config):
+def get_git_env(config, project_path):
     """Set up git environment with SSH key if needed."""
     env = os.environ.copy()
     ssh_key = config.get("ssh_key")
     if ssh_key:
-        env["GIT_SSH_COMMAND"] = f"ssh -i {ssh_key} -o IdentitiesOnly=yes -o ConnectTimeout=5"
+        key_path = Path(ssh_key)
+        if not key_path.is_absolute():
+            key_path = project_path / key_path
+        # Ensure it has correct permissions
+        if key_path.exists():
+            os.chmod(key_path, 0o600)
+        env["GIT_SSH_COMMAND"] = f"ssh -i {key_path.absolute()} -o IdentitiesOnly=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no"
     return env
 
 def handle_git_error(e, operation="git operation"):
@@ -48,6 +54,39 @@ def handle_git_error(e, operation="git operation"):
 def cli():
     pass
 
+def set_project_ssh_key(name, key_path=None, key_content=None):
+    """Copy an SSH key into the project directory and update the config."""
+    project_path = PROJECTS_DIR / name
+    config_file = project_path / "repomix-config.yaml"
+    
+    if not config_file.exists():
+        return {"error": f"Project '{name}' not found."}
+        
+    if key_path:
+        key_path = Path(os.path.expanduser(key_path))
+        if not key_path.exists():
+            return {"error": f"SSH key not found at {key_path}"}
+        with open(key_path, "r") as f:
+            key_content = f.read()
+            
+    if not key_content:
+        return {"error": "No SSH key content or path provided."}
+        
+    dest_key_path = project_path / ".ssh_key"
+    with open(dest_key_path, "w") as f:
+        f.write(key_content)
+    os.chmod(dest_key_path, 0o600)
+    
+    with open(config_file, "r") as f:
+        config = yaml.safe_load(f)
+        
+    config["ssh_key"] = ".ssh_key"
+    
+    with open(config_file, "w") as f:
+        yaml.dump(config, f, default_flow_style=False)
+        
+    return {"success": True, "message": f"SSH key updated for project '{name}'"}
+
 def create_project(name, source, ssh_key_path=None):
     """Programmatic version of create."""
     project_path = PROJECTS_DIR / name
@@ -57,7 +96,6 @@ def create_project(name, source, ssh_key_path=None):
     config = {
         "project_name": name,
         "source": source,
-        "ssh_key": ssh_key_path,
         "repomix_options": {
             "output": {
                 "filePath": f"projects/{name}/outputs/repomix-output.md",
@@ -72,6 +110,11 @@ def create_project(name, source, ssh_key_path=None):
     config_file = project_path / "repomix-config.yaml"
     with open(config_file, "w") as f:
         yaml.dump(config, f, default_flow_style=False)
+        
+    if ssh_key_path:
+        set_res = set_project_ssh_key(name, key_path=ssh_key_path)
+        if "error" in set_res:
+            return set_res
     
     return {"message": f"Project '{name}' created", "path": str(project_path)}
 
@@ -92,7 +135,7 @@ def build_project(name):
     # Handle git repositories
     if is_git_repo(source):
         repo_path = REPOS_DIR / name
-        env = get_git_env(config)
+        env = get_git_env(config, project_path)
         try:
             if repo_path.exists():
                 logs.append(f"Updating existing repo in {repo_path}...")
@@ -146,7 +189,7 @@ def refresh_project(name):
         if not repo_path.exists():
             return {"status": "cloning", "message": "Repo not found, triggering build..."}
 
-        env = get_git_env(config)
+        env = get_git_env(config, project_path)
         try:
             subprocess.run(["git", "-C", str(repo_path), "pull"], check=True, env=env, capture_output=True, text=True)
             return {"success": True, "message": f"Project '{name}' refreshed successfully."}
@@ -183,7 +226,7 @@ def get_project_list():
             if not repo_path.exists():
                 status = "Not Cloned"
             else:
-                env = get_git_env(config)
+                env = get_git_env(config, PROJECTS_DIR / name)
                 try:
                     subprocess.run(["git", "-C", str(repo_path), "fetch"], check=True, env=env, capture_output=True, text=True, timeout=5)
                     local = subprocess.check_output(["git", "-C", str(repo_path), "rev-parse", "HEAD"], text=True).strip()
@@ -304,6 +347,17 @@ def clean(name):
 def archive(name):
     """Archive a project and remove it."""
     res = archive_project(name)
+    if "error" in res:
+        click.echo(res["error"])
+    else:
+        click.echo(res["message"])
+
+@cli.command()
+@click.argument("name")
+@click.argument("key_path")
+def update_key(name, key_path):
+    """Update the SSH key for a project."""
+    res = set_project_ssh_key(name, key_path=key_path)
     if "error" in res:
         click.echo(res["error"])
     else:
