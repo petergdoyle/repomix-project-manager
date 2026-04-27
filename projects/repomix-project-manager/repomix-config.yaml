@@ -1,0 +1,12 @@
+project_name: repomix-project-manager
+repomix_options:
+  ignore:
+    customPatterns:
+    - node_modules
+    - .git
+    - .venv
+  output:
+    filePath: projects/repomix-project-manager/outputs/repomix-output.md
+    style: markdown
+source: git@github.com:petergdoyle/repomix-project-manager.git
+ssh_key: /Users/peter_doyle/.ssh/id_ed25519

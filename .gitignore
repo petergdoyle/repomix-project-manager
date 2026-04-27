@@ -5,3 +5,8 @@ projects/*/repomix.config.json
 repos/
 archive/*.zip
 .DS_Store
+
+# Ignore all projects by default
+projects/*
+# But don't ignore the sample project
+!projects/repomix-project-manager/
