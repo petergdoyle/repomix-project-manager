@@ -180,8 +180,8 @@ def refresh(name):
     else:
         click.echo(f"Warning: Project '{name}' is a local project (path: {source}). Nothing to refresh.")
 
-@cli.command()
-def list():
+@cli.command(name="list")
+def list_projects():
     """List all projects and their status."""
     if not PROJECTS_DIR.exists():
         click.echo("No projects found.")
