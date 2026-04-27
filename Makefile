@@ -1,4 +1,4 @@
-.PHONY: env project build clean archive refresh list web docker-build docker-run docker-stop help
+.PHONY: env project build clean archive refresh list web docker-build docker-run docker-stop docker-logs docker-restart help
 
 # Project variables
 VENV := .venv
@@ -18,6 +18,8 @@ help:
 	@echo "  make docker-build       - Build the Docker image"
 	@echo "  make docker-run         - Run the web interface in a Docker container"
 	@echo "  make docker-stop        - Stop the Docker container"
+	@echo "  make docker-logs        - Tail the Docker container logs"
+	@echo "  make docker-restart     - Stop, rebuild, and restart the container"
 
 env:
 	@echo "Setting up environment..."
@@ -76,6 +78,9 @@ docker-run:
 		-v $$(pwd)/projects:/app/projects \
 		-v $$(pwd)/repos:/app/repos \
 		-v $$(pwd)/archive:/app/archive \
+		-v $$(pwd)/server.py:/app/server.py \
+		-v $$(pwd)/manage_projects.py:/app/manage_projects.py \
+		-v $$(pwd)/web:/app/web \
 		-v $$HOME/.ssh:/root/.ssh:ro \
 		$(DOCKER_IMAGE)
 	@echo "Web interface is now running at http://localhost:8000"
@@ -84,3 +89,8 @@ docker-stop:
 	@echo "Stopping and removing container $(DOCKER_CONTAINER)..."
 	@docker stop $(DOCKER_CONTAINER) || true
 	@docker rm $(DOCKER_CONTAINER) || true
+
+docker-logs:
+	@docker logs -f $(DOCKER_CONTAINER)
+
+docker-restart: docker-stop docker-build docker-run

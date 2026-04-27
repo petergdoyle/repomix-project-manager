@@ -79,3 +79,8 @@ You can run the web interface in a Docker container to ensure a consistent envir
    ```bash
    make docker-stop
    ```
+
+4. **Restart (Stop, Rebuild, Run)**:
+   ```bash
+   make docker-restart
+   ```
