@@ -340,8 +340,13 @@
                 <input type="text" id="p-source" placeholder="git@github.com:user/repo.git">
             </div>
             <div class="form-group">
-                <label>SSH Private Key File (Optional)</label>
-                <input type="file" id="p-ssh-file" style="padding: 0.5rem; background: transparent; border: 1px dashed var(--glass-border);">
+                <label>SSH Private Key (Optional)</label>
+                <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+                    <label style="display: inline-flex; align-items: center; gap: 0.5rem;"><input type="radio" name="ssh-type" value="file" checked onchange="toggleSshInput('create')"> Upload File</label>
+                    <label style="display: inline-flex; align-items: center; gap: 0.5rem;"><input type="radio" name="ssh-type" value="text" onchange="toggleSshInput('create')"> Paste Text</label>
+                </div>
+                <input type="file" id="p-ssh-file" style="width: 100%; padding: 0.5rem; background: transparent; border: 1px dashed var(--glass-border);">
+                <textarea id="p-ssh-text" style="width: 100%; height: 100px; display: none; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 12px; color: #fff; padding: 0.75rem; font-family: monospace;" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----\n..."></textarea>
             </div>
             <div style="display: flex; gap: 1rem; margin-top: 2rem;">
                 <button class="btn btn-primary" style="flex: 1; justify-content: center;" onclick="createProject()">Create</button>
@@ -349,7 +354,25 @@
             </div>
         </div>
     </div>
-
+    <!-- Update Key Modal -->
+    <div class="modal-overlay" id="key-modal-overlay" onclick="hideKeyModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2 style="margin-bottom: 1.5rem; font-family: 'Outfit';">Update SSH Key</h2>
+            <input type="hidden" id="k-name">
+            <div class="form-group">
+                <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+                    <label style="display: inline-flex; align-items: center; gap: 0.5rem;"><input type="radio" name="k-ssh-type" value="file" checked onchange="toggleSshInput('update')"> Upload File</label>
+                    <label style="display: inline-flex; align-items: center; gap: 0.5rem;"><input type="radio" name="k-ssh-type" value="text" onchange="toggleSshInput('update')"> Paste Text</label>
+                </div>
+                <input type="file" id="k-ssh-file" style="width: 100%; padding: 0.5rem; background: transparent; border: 1px dashed var(--glass-border);">
+                <textarea id="k-ssh-text" style="width: 100%; height: 100px; display: none; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 12px; color: #fff; padding: 0.75rem; font-family: monospace;" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----\n..."></textarea>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button class="btn btn-primary" style="flex: 1; justify-content: center;" onclick="submitUpdateKey()">Update Key</button>
+                <button class="btn" style="flex: 1; justify-content: center; background: rgba(255,255,255,0.05);" onclick="hideKeyModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
     <div id="toast" class="toast"></div>
 
     <script>
@@ -383,8 +406,7 @@
                         <button class="btn btn-action" onclick="action('${p.name}', 'refresh')">Refresh</button>
                         <button class="btn btn-action" onclick="viewOutput('${p.name}')">View</button>
                         <a class="btn btn-action" href="/api/projects/${p.name}/download/${p.name}-repomix.md" download>Download</a>
-                        <button class="btn btn-action" onclick="document.getElementById('ssh-upload-${p.name}').click()">Key</button>
-                        <input type="file" id="ssh-upload-${p.name}" style="display: none;" onchange="uploadSSHKey('${p.name}', this)">
+                        <button class="btn btn-action" onclick="showKeyModal('${p.name}')">Key</button>
                         <button class="btn btn-action" onclick="action('${p.name}', 'clean')">Clean</button>
                         <button class="btn btn-action" style="color: var(--error);" onclick="confirmArchive('${p.name}')">Archive</button>
                     </div>
@@ -413,7 +435,9 @@
         async function createProject() {
             const name = document.getElementById('p-name').value;
             const source = document.getElementById('p-source').value;
+            const isFile = document.querySelector('input[name="ssh-type"]:checked').value === 'file';
             const sshFile = document.getElementById('p-ssh-file').files[0];
+            const sshText = document.getElementById('p-ssh-text').value;
 
             if (!name || !source) {
                 showToast("Name and Source are required", true);
@@ -430,9 +454,11 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    if (sshFile) {
+                    if ((isFile && sshFile) || (!isFile && sshText)) {
                         const formData = new FormData();
-                        formData.append('file', sshFile);
+                        if (isFile) formData.append('file', sshFile);
+                        else formData.append('text', sshText);
+                        
                         await fetch(`/api/projects/${name}/ssh-key`, {
                             method: 'POST',
                             body: formData
@@ -450,13 +476,28 @@
             }
         }
 
-        async function uploadSSHKey(name, input) {
-            if (!input.files || input.files.length === 0) return;
-            const file = input.files[0];
-            const formData = new FormData();
-            formData.append('file', file);
+        async function submitUpdateKey() {
+            const name = document.getElementById('k-name').value;
+            const isFile = document.querySelector('input[name="k-ssh-type"]:checked').value === 'file';
+            const sshFile = document.getElementById('k-ssh-file').files[0];
+            const sshText = document.getElementById('k-ssh-text').value;
             
-            setLoading(true, "Uploading SSH key...");
+            if (isFile && !sshFile) {
+                showToast("Please select a file", true);
+                return;
+            }
+            if (!isFile && !sshText) {
+                showToast("Please paste the key text", true);
+                return;
+            }
+
+            hideKeyModal();
+            setLoading(true, "Updating SSH key...");
+            
+            const formData = new FormData();
+            if (isFile) formData.append('file', sshFile);
+            else formData.append('text', sshText);
+            
             try {
                 const res = await fetch(`/api/projects/${name}/ssh-key`, {
                     method: 'POST',
@@ -472,7 +513,6 @@
                 showToast("Request failed", true);
             } finally {
                 setLoading(false);
-                input.value = '';
             }
         }
 
@@ -494,6 +534,26 @@
         function hideModal(e) {
             document.getElementById('modal-overlay').classList.remove('active');
             document.querySelector('.modal').classList.remove('active');
+        }
+
+        function toggleSshInput(type) {
+            const prefix = type === 'create' ? 'p' : 'k';
+            const isFile = document.querySelector(`input[name="${prefix === 'p' ? 'ssh-type' : 'k-ssh-type'}"]:checked`).value === 'file';
+            document.getElementById(`${prefix}-ssh-file`).style.display = isFile ? 'block' : 'none';
+            document.getElementById(`${prefix}-ssh-text`).style.display = isFile ? 'none' : 'block';
+        }
+
+        function showKeyModal(name) {
+            document.getElementById('k-name').value = name;
+            document.getElementById('key-modal-overlay').classList.add('active');
+            document.querySelectorAll('#key-modal-overlay .modal')[0].classList.add('active');
+        }
+
+        function hideKeyModal(e) {
+            document.getElementById('key-modal-overlay').classList.remove('active');
+            document.querySelectorAll('#key-modal-overlay .modal')[0].classList.remove('active');
+            document.getElementById('k-ssh-file').value = '';
+            document.getElementById('k-ssh-text').value = '';
         }
 
         function setLoading(active, text = "") {
