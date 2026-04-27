@@ -167,7 +167,7 @@
 
         .actions {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 0.5rem;
         }
 
@@ -404,7 +404,6 @@
                     <div class="actions">
                         <button class="btn btn-action" onclick="action('${p.name}', 'build')">Build</button>
                         <button class="btn btn-action" onclick="action('${p.name}', 'refresh')">Refresh</button>
-                        <button class="btn btn-action" onclick="viewOutput('${p.name}')">View</button>
                         <a class="btn btn-action" href="/api/projects/${p.name}/download/${p.name}-repomix.md" download>Download</a>
                         <button class="btn btn-action" onclick="showKeyModal('${p.name}')">Key</button>
                         <button class="btn btn-action" onclick="action('${p.name}', 'clean')">Clean</button>
@@ -516,9 +515,7 @@
             }
         }
 
-        function viewOutput(name) {
-            window.open(`/api/projects/${name}/output`, '_blank');
-        }
+
 
         function confirmArchive(name) {
             if (confirm(`Are you sure you want to archive and remove project '${name}'?`)) {
