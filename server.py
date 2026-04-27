@@ -69,6 +69,9 @@ async def upload_ssh_key(
     else:
         raise HTTPException(status_code=400, detail="No file or text provided")
         
+    if key_content.strip().startswith(("ssh-rsa ", "ssh-ed25519 ", "ecdsa-sha2-")):
+        raise HTTPException(status_code=400, detail="It looks like you provided a PUBLIC key (.pub). Please provide your PRIVATE key instead.")
+        
     res = mp.set_project_ssh_key(name, key_content=key_content)
     if "error" in res:
         raise HTTPException(status_code=400, detail=res["error"])

@@ -31,6 +31,8 @@ def is_git_repo(source):
 def get_git_env(config, project_path):
     """Set up git environment with SSH key if needed."""
     env = os.environ.copy()
+    ssh_cmd = "ssh -o ControlMaster=no -o ConnectTimeout=5 -o StrictHostKeyChecking=no"
+    
     ssh_key = config.get("ssh_key")
     if ssh_key:
         key_path = Path(ssh_key)
@@ -39,7 +41,9 @@ def get_git_env(config, project_path):
         # Ensure it has correct permissions
         if key_path.exists():
             os.chmod(key_path, 0o600)
-        env["GIT_SSH_COMMAND"] = f"ssh -i {key_path.absolute()} -o IdentitiesOnly=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no"
+        ssh_cmd += f" -i {key_path.absolute()} -o IdentitiesOnly=yes"
+        
+    env["GIT_SSH_COMMAND"] = ssh_cmd
     return env
 
 def handle_git_error(e, operation="git operation"):
