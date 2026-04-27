@@ -1,4 +1,4 @@
-# Release Summary: v1.0.0 (Web UI & Docker Enhancements)
+# Release Summary: v1.1.0 (Web UI & SSH Enhancements)
 
 **Date**: April 27, 2026
 
@@ -25,6 +25,11 @@ This release marks a significant milestone for **Repomix Project Manager**, evol
 ### 4. CLI Workflow Additions
 - **Interactive Prompts**: `make project` now features improved user interactions, including an optional prompt to immediately build the repomix configuration after creation.
 - **Expanded Makefile**: Added targets `make web`, `make docker-build`, `make docker-run`, `make docker-logs`, and a unified `make docker-restart` for streamlined operations.
+
+### 5. Advanced SSH Key Management
+- **Project-Isolated Keys**: SSH authentication is now isolated per-project. During creation or via the UI, keys are copied directly into the project folder (`.ssh_key`). This guarantees Git operations inside the Docker container always succeed without relying on host file mappings.
+- **Unified Upload & Paste**: The Web UI features intuitive dialogs allowing you to optionally upload a private key file `.pem/.key` or manually paste the raw text into a secure textarea.
+- **Docker ControlMaster Bypass**: Solved a systemic issue where Docker on Mac would crash when attempting to bind to Unix sockets (`Operation not supported`). The system now forces `ControlMaster=no` locally to ensure zero-configuration Git cloning.
 
 ## 🛠️ Technical Debt Addressed
 - **Namespace Shadowing**: Fixed a critical bug where the CLI `list` command was shadowing Python's built-in `list` function, causing errors during SSH key discovery.
