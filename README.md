@@ -88,3 +88,11 @@ You can run the web interface in a Docker container to ensure a consistent envir
    ```bash
    make docker-restart
    ```
+
+## Acknowledgements
+
+A huge thanks to **[yamadashy](https://github.com/yamadashy)** for creating and maintaining **[repomix](https://github.com/yamadashy/repomix)** — the fantastic open-source tool that powers the core of this project. 🎉
+
+Repomix does the heavy lifting of packing entire codebases into a single, structured file that LLMs can digest effortlessly. It's beautifully simple, incredibly useful, and is exactly the kind of tool that makes working with AI on real codebases a joy. If you find this project useful, please go give repomix a ⭐ on GitHub — it absolutely deserves it!
+
+> *"Pack your codebase into a single AI-friendly file."* — [repomix](https://github.com/yamadashy/repomix)
