@@ -186,6 +186,38 @@
             border-color: var(--primary);
         }
 
+        /* Tooltips */
+        [data-tooltip] {
+            position: relative;
+        }
+
+        [data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.95);
+            color: #e2e8f0;
+            font-size: 0.75rem;
+            font-weight: 400;
+            white-space: nowrap;
+            padding: 0.4rem 0.75rem;
+            border-radius: 8px;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            transform: translateX(-50%) translateY(4px);
+            z-index: 9999;
+        }
+
+        [data-tooltip]:hover::after {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
         /* Modal */
         .modal-overlay {
             position: fixed;
@@ -402,12 +434,12 @@
                     </div>
                     <div class="source-url" title="${p.source}">${p.source}</div>
                     <div class="actions">
-                        <button class="btn btn-action" onclick="action('${p.name}', 'build')">Build</button>
-                        <button class="btn btn-action" onclick="action('${p.name}', 'refresh')">Refresh</button>
-                        <a class="btn btn-action" href="/api/projects/${p.name}/download/${p.name}-repomix.md" download>Download</a>
-                        <button class="btn btn-action" onclick="showKeyModal('${p.name}')">Key</button>
-                        <button class="btn btn-action" onclick="action('${p.name}', 'clean')">Clean</button>
-                        <button class="btn btn-action" style="color: var(--error);" onclick="confirmArchive('${p.name}')">Archive</button>
+                        <button class="btn btn-action" data-tooltip="Clone/pull repo and run repomix to generate output" onclick="action('${p.name}', 'build')">Build</button>
+                        <button class="btn btn-action" data-tooltip="Pull latest changes from the remote Git repository" onclick="action('${p.name}', 'refresh')">Refresh</button>
+                        <a class="btn btn-action" data-tooltip="Download the repomix output as a Markdown file" href="/api/projects/${p.name}/download/${p.name}-repomix.md" download>Download</a>
+                        <button class="btn btn-action" data-tooltip="Upload or paste an SSH private key for Git authentication" onclick="showKeyModal('${p.name}')">Key</button>
+                        <button class="btn btn-action" data-tooltip="Delete all generated output files for this project" onclick="action('${p.name}', 'clean')">Clean</button>
+                        <button class="btn btn-action" data-tooltip="Zip and archive this project, removing it from the dashboard" style="color: var(--error);" onclick="confirmArchive('${p.name}')">Archive</button>
                     </div>
                 </div>
             `).join('');
